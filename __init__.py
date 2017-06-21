@@ -52,6 +52,93 @@ class Preprocessor:
 		targetFile = open("keywords.txt","w")
 		targetFile.write('_'.join(self.keywords))
 
+	def vectorize(self):
+		""" Method to vectorize all the keywords.
+		
+			The vector is formed using a dictionary named vector which stores the count of all keywords.
+		"""
+		key_list = open("keywords.txt","r").read().split("_")
+		for key in key_list:
+			self.vector[key] = 0
+		for file_ in self.files:
+			data, stemmedData = open("Data/"+file_,"r").read(), list()
+			replace_punctuation = string.maketrans(string.punctuation, ' '*len(string.punctuation))
+			data = data.translate(replace_punctuation).lower()
+			tokens = wordpunct_tokenize(data)
+			tokens = [word for word in tokens if len(word) > 1]
+			# applying n-grams and removal of stopwords
+			tokens2 = [' '.join(word) for word in ngrams(tokens, 2)]
+			tokens3 = [' '.join(word) for word in ngrams(tokens, 3)]
+			tokens = [word for word in tokens if word not in self.stopwords]
+			for token in tokens:
+				try:
+					stemmedData.append(str(self.stemmer.stem(token)))
+				except Exception:
+					pass
+			# print len(stemmedData)
+			stemmedData = stemmedData + tokens2+tokens3
+			for ele in stemmedData:
+				self.vector[ele] += 1
+	
+	def dumpVector(self):
+		""" Method to dump the frequency vector in a file called 'total.txt'.
+		
+			The method stores the key, value pairs in the file separated by '^' so that it can be read directly later.
+		"""
+		targetFile = open("Total.txt","w")
+		for key in self.vector:
+			value = key + ":" + str(self.vector[key]) + "^"
+			targetFile.write(value)
+
+	def applyTfIdf(self):
+		""" Method to apply TfIdf technique and store the respective file vectors in separate files.
+		
+			Tf : Term Frequency
+			Idf: Inverse Document Frequency
+		"""
+		inp_list = open("Total.txt","r").read().split("^")
+		final_vector = dict()
+		for ele in inp_list:
+			try:
+				key, value = ele.split(':')
+				final_vector[key] = int(value)
+			except:
+				pass
+		# print len(inp_list), len(final_vector)
+		for file_ in self.files:
+			data, vec = open("Data/"+file_,"r").read(), dict()
+			# print file_
+			replace_punctuation = string.maketrans(string.punctuation, ' '*len(string.punctuation))
+			data = data.translate(replace_punctuation).lower()
+			tokens =  wordpunct_tokenize(data)
+			tokens = [word for word in tokens if len(word) > 1]
+			# applying n-grams and removal of stopwords
+			tokens2 = [' '.join(word) for word in ngrams(tokens, 2)]
+			tokens3 = [' '.join(word) for word in ngrams(tokens, 3)]
+			tokens = [word for word in tokens if word not in self.stopwords]
+			stemmedData = list()
+			for word in tokens:
+				try:
+					stemmedData.append(str(self.stemmer.stem(word)))
+				except Exception:
+					pass
+			stemmedData = stemmedData +tokens2+tokens3
+			for token in stemmedData:
+				if token in vec:
+					vec[token] += 1
+				else:
+					vec[token] = 1
+			for token in vec:
+				#if token == 'cricket' :
+					#print file_ , float(vec[token]) ,  final_vector[token]
+				vec[token] = (float(vec[token]))*(math.log(1+(8.0/final_vector[token])))
+			#print len(stemmedData)
+			fname = "Tfidf/D" + str(file_)
+			fout = open(fname, "w")
+			for key in vec:
+				outStr = key + ":" + str(vec[key]) + "^"
+				fout.write(outStr)
+			# print file_, len(vec)
 
 		
 
@@ -155,4 +242,13 @@ class Classifier:
 	
 if __name__ == '__main__':
 	docs = os.listdir(os.getcwd()+'/Data/')
+	#print docs
 	p = Preprocessor(docs)
+	#p.extract()
+	#p.dumpKeywords()
+	#p.vectorize()
+	#p.dumpVector()
+	#p.applyTfIdf()
+	#print "done"
+	c = Classifier(docs)
+	c.classify()
