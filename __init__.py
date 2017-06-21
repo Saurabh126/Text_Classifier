@@ -51,7 +51,108 @@ class Preprocessor:
 		"""
 		targetFile = open("keywords.txt","w")
 		targetFile.write('_'.join(self.keywords))
+
+
 		
+
+class Classifier:
+	""" The Classifier class which takes in the input sentence to be classified and classifies it among the training documents.
+	
+		inp  : input sentence
+		files: list of training files
+	
+	"""
+	def __init__(self, files):
+		self.inp = raw_input()
+		self.files = files
+		self.stemmer = SnowballStemmer("english")
+		self.stopwords = [str(word) for word in stopwords.words("english")]
+		# print self.inp
+	
+	def classify(self):
+		""" The main method that does the task of classifying input.
+		
+			It also tags the words that are being classified. Also, it adds the sentence to a file 'dtrain.txt' if unclassified so that model is updated dynamically later.
+		
+		"""
+		replace_punctuation = string.maketrans(string.punctuation, ' '*len(string.punctuation))
+		self.inp = self.inp.translate(replace_punctuation).lower()
+		tokens = wordpunct_tokenize(self.inp)
+		tokens = [word for word in tokens if len(word) > 1]
+		tokens2 = [' '.join(word) for word in ngrams(tokens, 2)]
+		tokens3 = [' '.join(word) for word in ngrams(tokens, 3)]
+		# print tokens
+		tokens = [word for word in tokens if word not in self.stopwords]
+		stemmedData = list()
+		for word in tokens:
+			try:
+				stemmedData.append(str(self.stemmer.stem(word)))
+			except Exception:
+				pass
+		stemmedData = stemmedData + tokens2+tokens3
+		#print stemmedData
+		vec = dict()
+		f_later = dict()
+		for ele in stemmedData:
+			f_later[ele] = ''
+			if ele in vec:
+				vec[ele] += 1
+			else:
+				vec[ele] = 1
+		#print vec
+		score = [0]*8
+		for docNum in range(1,9):
+			tfidfVector = open("Tfidf/D" + str(self.files[docNum-1])).read().split('^')
+			# print tfidfVector
+			#print "Tfidf/D" + str(self.files[docNum-1]),
+			final_vector = dict()
+			for ele in tfidfVector:
+				try:
+					key, value = ele.split(':')
+					final_vector[key] = float(value)
+				except Exception:
+					pass
+			# print final_vector
+			for ele in vec:
+				try:
+					score[docNum-1] += vec[ele]*final_vector[ele]
+					f_later[ele] += str(docNum) + ','
+					#print ele, vec[ele], final_vector[ele],
+				except:
+					pass
+			#print docNum, score[docNum-1]
+		#print score
+		nd = sorted(range(len(score)), key=lambda i: score[i])[:]
+		#print self.files
+		#print nd
+		fnd = [self.files[i] for i in nd]
+		#print fnd
+		for ele in f_later:
+			f_later[ele] = f_later[ele][:-1].split(',')
+		count = 1
+		for ele in f_later:
+			if '' in f_later[ele]:
+				count = 0
+		
+		temp = f_later.copy()
+		
+		for it in range(-1,-9,-1):
+			print "\n"
+			if score[nd[it]] > 0:
+				print "Class : D" + str(nd[it] + 1) + " (" + self.files[nd[it]][:-4] + ")"
+				print "Score : " + str(score[nd[it]])
+				print "Classifying words: "
+				for key in temp:
+					 if str(nd[it]+1) in temp[key]:
+					 	print key
+					 	temp[key] = ''
+
+		if count == 0:
+			train = open("dtrain.txt", "a")
+			sentence = self.inp + "$" + str(nd[-1]) + "$"
+			train.write(sentence)
+			print sentence
+	
 if __name__ == '__main__':
 	docs = os.listdir(os.getcwd()+'/Data/')
 	p = Preprocessor(docs)
