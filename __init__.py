@@ -23,7 +23,6 @@ class Preprocessor:
 		"""
 		for file_ in self.files:
 			data = open("Data/"+file_,"r").read()
-			# print file_
 			replace_punctuation = string.maketrans(string.punctuation, ' '*len(string.punctuation))
 			data = data.translate(replace_punctuation).lower()
 			tokens =  wordpunct_tokenize(data)
@@ -32,7 +31,6 @@ class Preprocessor:
 			tokens2 = [' '.join(word) for word in ngrams(tokens, 2)]
 			tokens3 = [' '.join(word) for word in ngrams(tokens, 3)]
 			tokens = [word for word in tokens if word not in self.stopwords]
-			# print tokens[:100]
 			stemmedData = list()
 			for word in tokens:
 				try:
@@ -75,7 +73,6 @@ class Preprocessor:
 					stemmedData.append(str(self.stemmer.stem(token)))
 				except Exception:
 					pass
-			# print len(stemmedData)
 			stemmedData = stemmedData + tokens2+tokens3
 			for ele in stemmedData:
 				self.vector[ele] += 1
@@ -104,10 +101,8 @@ class Preprocessor:
 				final_vector[key] = int(value)
 			except:
 				pass
-		# print len(inp_list), len(final_vector)
 		for file_ in self.files:
 			data, vec = open("Data/"+file_,"r").read(), dict()
-			# print file_
 			replace_punctuation = string.maketrans(string.punctuation, ' '*len(string.punctuation))
 			data = data.translate(replace_punctuation).lower()
 			tokens =  wordpunct_tokenize(data)
@@ -129,18 +124,13 @@ class Preprocessor:
 				else:
 					vec[token] = 1
 			for token in vec:
-				#if token == 'cricket' :
-					#print file_ , float(vec[token]) ,  final_vector[token]
 				vec[token] = (float(vec[token]))*(math.log(1+(8.0/final_vector[token])))
-			#print len(stemmedData)
 			fname = "Tfidf/D" + str(file_)
 			fout = open(fname, "w")
 			for key in vec:
 				outStr = key + ":" + str(vec[key]) + "^"
 				fout.write(outStr)
-			# print file_, len(vec)
 
-		
 
 class Classifier:
 	""" The Classifier class which takes in the input sentence to be classified and classifies it among the training documents.
@@ -154,7 +144,6 @@ class Classifier:
 		self.files = files
 		self.stemmer = SnowballStemmer("english")
 		self.stopwords = [str(word) for word in stopwords.words("english")]
-		# print self.inp
 	
 	def classify(self):
 		""" The main method that does the task of classifying input.
@@ -168,7 +157,6 @@ class Classifier:
 		tokens = [word for word in tokens if len(word) > 1]
 		tokens2 = [' '.join(word) for word in ngrams(tokens, 2)]
 		tokens3 = [' '.join(word) for word in ngrams(tokens, 3)]
-		# print tokens
 		tokens = [word for word in tokens if word not in self.stopwords]
 		stemmedData = list()
 		for word in tokens:
@@ -177,7 +165,6 @@ class Classifier:
 			except Exception:
 				pass
 		stemmedData = stemmedData + tokens2+tokens3
-		#print stemmedData
 		vec = dict()
 		f_later = dict()
 		for ele in stemmedData:
@@ -186,12 +173,9 @@ class Classifier:
 				vec[ele] += 1
 			else:
 				vec[ele] = 1
-		#print vec
 		score = [0]*8
 		for docNum in range(1,9):
 			tfidfVector = open("Tfidf/D" + str(self.files[docNum-1])).read().split('^')
-			# print tfidfVector
-			#print "Tfidf/D" + str(self.files[docNum-1]),
 			final_vector = dict()
 			for ele in tfidfVector:
 				try:
@@ -199,21 +183,14 @@ class Classifier:
 					final_vector[key] = float(value)
 				except Exception:
 					pass
-			# print final_vector
 			for ele in vec:
 				try:
 					score[docNum-1] += vec[ele]*final_vector[ele]
 					f_later[ele] += str(docNum) + ','
-					#print ele, vec[ele], final_vector[ele],
 				except:
 					pass
-			#print docNum, score[docNum-1]
-		#print score
 		nd = sorted(range(len(score)), key=lambda i: score[i])[:]
-		#print self.files
-		#print nd
 		fnd = [self.files[i] for i in nd]
-		#print fnd
 		for ele in f_later:
 			f_later[ele] = f_later[ele][:-1].split(',')
 		count = 1
